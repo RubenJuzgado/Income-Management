@@ -1,3 +1,7 @@
 /backend/project/api/__pycache__/
 /backend/project/api/migrations/
 /backend/project/project/__pycache__/
+/cockroach-data/
+/node1/
+/node2/
+/node3/
