@@ -5,6 +5,8 @@
  <li>Install requirements.txt python packages</li>
  <li>Install package.json dependencies located in \backend\project\frontend</li>
 </ul>
+<h2>Synchronize clocks on different Linux machines</h2>
+Coming soon
 <h2>CockroachDB Setup Insecure</h2>
 This setup will be for testing.
 <ol>
@@ -30,3 +32,47 @@ Now, to configure the HAProxy follow the next steps:
   <li>Run the cockroach gen haproxy command, specifying the address of any CockroachDB node: <code>cockroach gen haproxy --insecure --host=any_node_ip --port=26257</code></li>
   <li>Start HAProxy, with the -f flag pointing to the haproxy.cfg file: <code>haproxy -f haproxy.cfg</code></li>
 </ol>
+<h2>CockroachDB Setup Secure</h2>
+This setup would work for a production environment
+ <h3>Installation</h3>
+ Install CockroachDB on different hosts that will be the nodes (at least 3) and the local machine:
+  <ul>
+    <li>For Windows: https://www.cockroachlabs.com/docs/v23.2/install-cockroachdb-windows</li>
+    <li>For Linux: https://www.cockroachlabs.com/docs/v23.2/install-cockroachdb-linux</li>
+  </ul>
+ <h3>Generate certificates</h3>
+ Cockroach cert commands or openssl commands can be used to generate security certificates. We will use cockroach cert commands. Follow the next steps:
+ <ol>
+  <li>Create two directories in your local machine: <code>mkdir certs my-safe-directory</code></li>
+  <b>Note: </b>Certs will be the folder where you will store the generated CA certificate and all node and client certificates and keys. my-safe-directory is where you will store your CA key and then reference the key when generating node and client certificates.
+  <li>Create the CA (Certificate Authority) certificate and key pair: <code>cockroach cert create-ca --certs-dir=certs --ca-key=my-safe-directory/ca.key</code></li>
+  <li>Create the certificate and key pair for your nodes. You need to include all the common names, hostnames and IPs used to refer the node you are creating the certificate for, as well as for the load balancer: 
+   <code>cockroach cert create-node --overwrite node_internal_IP_address node_external_IP_address node_hostname other_common_names_for_node localhost 127.0.0.1 load_balancer_IP_address load_balancer_hostname other_common_names_for_load_balancer --certs-dir=certs --ca-key=my-safe-directory/ca.key</code></li>
+  <li>Upload the CA certificate and node certificate and key to the node. You can use ssh and scp to do it: <code>ssh username@node_address "mkdir certs"</code> <code>scp certs/ca.crt certs/node.crt certs/node.key username@node_address</code> </li>
+  <b>Note:</b> Do these last 2 steps for every node.
+  <br>
+ </ol>
+ These next 2 steps are for creating a client certificate so you can log in as root from a machine.
+ <ol>
+  <li>Create a client certificate and key for the root user: <code>cockroach cert create-client root --certs-dir=certs --ca-key=my-safe-directory/ca.key</code></li>
+  <li>Upload the CA certificate and client certificate and key to the machine you want to log in as root: <code>ssh username@machine_address "mkdir certs"</code> <code>scp certs/ca.crt certs/client.root.crt certs/client.root.key username@machine_address:~/certs</code></li>
+ </ol>
+ <h3>Start nodes</h3>
+ Make sure you have cockroach installed in each node and the binary copied to the path. Then, follow the next steps on each node:
+ <ol>
+  <li>CockroachDB uses custom-built versions of the GEOS libraries. Copy these libraries to the location where CockroachDB expects to find them: <code>sudo mkdir -p /usr/local/lib/cockroach</code> <code>sudo cp -i cockroach-v24.1.0.linux-amd64/lib/libgeos.so /usr/local/lib/cockroach/</code> <code>sudo cp -i cockroach-v24.1.0.linux-amd64/lib/libgeos_c.so /usr/local/lib/cockroach/</code></li>
+  <li>Run the cockroach start command: <code>cockroach start --certs-dir=certs --advertise-addr=node_address --join=node1_address,node2_address,node3_address</code></li>
+ </ol>
+ Then initialize the cluster from the local machine using the command: <code>cockroach init --certs-dir=certs --host=address_of_any_node_on_join_list</code>
+ <h3>Set up load balancing</h3>
+This time you will generate the haproxy file from the local machine. Follow the next steps:
+<ol>
+ <li>Run the cockroach gen haproxy command: <code>cockroach gen haproxy --certs-dir=certs --host=address_of_any_node</code></li>
+ <li>Upload the haproxy.cfg file to the machine where you want to run HAProxy: <code>scp haproxy.cfg username@load_balancer_address:~/ </code></li>
+</ol>
+Now, from the load balancer machine, follow the next steps:
+<ol>
+ <li>Install HAProxy in the load balancer machine: <code>sudo apt-get install haproxy</code></li>
+ <li>Start HAProxy: <code>haproxy -f haproxy.cfg</code></li>
+</ol>
+
