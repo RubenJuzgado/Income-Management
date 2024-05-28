@@ -3,8 +3,12 @@ from django.shortcuts import render
 import json
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
+from cryptography.fernet import Fernet
+from django.conf import settings
 
 from . models import *
+
+ENCRYPTION_KEY = settings.ENCRYPTION_KEY
 
 # Register view
 @require_POST
@@ -36,6 +40,8 @@ def register(request):
     if len(password) < 11:
         return JsonResponse({"detail": "Password must contain at least 11 characters"}, status=400)
     
+    # Encrypt password
+    password = User.encrypt_password(password).decode()
     # Create and save user
     user = User.objects.create(email=email, password=password, name=name, surname=surname)
     user.save()
@@ -60,7 +66,8 @@ def login(request):
         return JsonResponse({"detail": "Wrong credentials"}, status=400)
     
     # Check if user exists and password is correct
-    if not user.password == password:
+    f = Fernet(ENCRYPTION_KEY)
+    if not user.check_password(password):
         return JsonResponse({"detail": "Wrong credentials"}, status=400)
     
     return JsonResponse({"detail": "Succesfully logged in", "user": {"email": user.email, "name": user.name, "surname": user.surname}}, status=200)
@@ -226,7 +233,7 @@ def create_savings_goal(request):
     # Parse request body
     data = json.loads(request.body)
     name = data.get("name")
-    goal = data.get("goal")
+    goal = float((data.get("goal"))) if data.get("goal") else None
     email = data.get("email")
     rows = data.get("rows")
 
@@ -462,7 +469,6 @@ def get_unavailable_money(container):
     unavailable_money = 0
     
     for saving in savings:
-        print(saving.quantity)
         unavailable_money += saving.quantity
     
     return unavailable_money
@@ -497,7 +503,5 @@ def get_savings(request):
     for saving in savings_list:
         container = Container.objects.get(id=saving["container_id"])
         savings.append({"id": len(savings),"container": container.name, "quantity": saving["quantity"]})
-    
-    print(savings)
     
     return JsonResponse({"detail": "Savings successfully obtained", "savings": savings})

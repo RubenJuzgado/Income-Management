@@ -12,16 +12,29 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 
 from pathlib import Path
 import os
+import environ
+from cryptography.fernet import Fernet
+import logging
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Inicializa la configuración de las variables de entorno
+env = environ.Env()
+
+# Lee las variables de entorno desde el archivo .env
+environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
+
+# Usa la clave de cifrado desde el archivo .env
+ENCRYPTION_KEY = env('ENCRYPTION_KEY').encode()
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-ockcmsn3*9x!gds#_#78*h+y0w*ayk4y_c4#c$xne*)o_&zpgz'
+SECRET_KEY = env('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -84,11 +97,21 @@ WSGI_APPLICATION = 'project.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django_cockroachdb',
-        'NAME': 'Income-Management',
-        'USER': 'root',
-        'PASSWORD': '',
-        'HOST': '192.168.1.37', # IP del Load Balancer
-        'PORT': '26258',
+        'NAME': env('DATABASE_NAME'),
+        'USER': env('DATABASE_USER'),
+        'PASSWORD': env('DATABASE_PASSWORD'),
+        'HOST': env('DATABASE_HOST'), # IP del Load Balancer
+        'PORT': env('DATABASE_PORT'),
+        # If connecting with SSL, include the section below, replacing the
+        # file paths as appropriate.
+        'OPTIONS': {
+            'sslmode': 'verify-full',
+            'sslrootcert': env('CERT_PATH'),
+            # Either sslcert and sslkey (below) or PASSWORD (above) is
+            # required.
+            # 'sslcert': '/certs/client.rjuzgado.crt',
+            # 'sslkey': '/certs/client.rjuzgado.key',
+        },
     },
 }
 
@@ -170,3 +193,29 @@ SESSION_COOKIE_HTTPONLY = True
 # SESSION_COOKIE_HTTPONLY = True
 
 
+
+# In order to see the SQL queries that Django is running, you can add the following to your settings.py file:
+
+# logging.basicConfig(
+#     level=logging.DEBUG,
+#     format='%(asctime)s %(levelname)s %(message)s',
+#     handlers=[
+#         logging.StreamHandler()
+#     ]
+# )
+
+# LOGGING = {
+#     'version': 1,
+#     'disable_existing_loggers': False,
+#     'handlers': {
+#         'console': {
+#             'class': 'logging.StreamHandler',
+#         },
+#     },
+#     'loggers': {
+#         'django.db.backends': {
+#             'handlers': ['console'],
+#             'level': 'DEBUG',
+#         },
+#     },
+# }

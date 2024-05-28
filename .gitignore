@@ -5,3 +5,5 @@
 /node1/
 /node2/
 /node3/
+backend/project/.env
+/certs

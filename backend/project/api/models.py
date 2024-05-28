@@ -3,13 +3,27 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db.models.constraints import UniqueConstraint
+from cryptography.fernet import Fernet
+from django.conf import settings
 
 # Create your models here.
 class User(models.Model):
     email = models.CharField(max_length=50, unique=True)
     name = models.CharField(max_length=20)
     surname = models.CharField(max_length=50)
-    password = models.CharField(max_length=30)
+    password = models.CharField(max_length=255)
+
+    
+    # Esta función es para comprobar que la contraseña cifrada es igual a la contraseña que se le pasa
+    def check_password(self, password):
+        f = Fernet(settings.ENCRYPTION_KEY)
+        decrypted = f.decrypt(self.password.encode()).decode()
+        return decrypted == password
+    
+    def encrypt_password(password):
+        f = Fernet(settings.ENCRYPTION_KEY)
+        encrypted = f.encrypt(password.encode())
+        return encrypted
 
 # Esta clase es para los contenedores de dinero, se correspondería con las distintas cuentas bancarias que tuviera el usuario
 class Container(models.Model):
