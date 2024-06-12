@@ -722,7 +722,7 @@ function ContainerSelection(props) {
   }
 
   const handleFixedQuantityChange = (e) => {
-    if (!calculateExceedsCurrentAmount(rows, goal, e.target.value, props.id)) {
+    if (!goal || !calculateExceedsCurrentAmount(rows, goal, e.target.value, props.id)) {
       setRow(row => ({...row, quantity: e.target.value}));
       setRows(rows.map((nrow, index) => {
         if (index === props.id) {

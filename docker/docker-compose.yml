@@ -1,0 +1,134 @@
+version: '3.8'
+
+volumes:
+  cockroach-certs:
+  node-0:
+  node-1:
+  node-2:
+  node-3:
+  node-4:
+
+services:
+
+  node-cert:
+    container_name: node-cert
+    hostname: node-cert
+    image: cockroach-cert-generator:latest
+    volumes:
+      - cockroach-certs:/certs
+    environment:
+      - NODE_NAMES=node-0.income-management.es,node-1.income-management.es,node-2.income-management.es,node-3.income-management.es,node-4.income-management.es
+      - LOAD_BALANCER=lb.income-management.es
+
+  node-0:
+    container_name: node-0
+    hostname: node-0.income-management.es
+    image: cockroachdb/cockroach:latest
+    command: start --cluster-name=example-secure --logtostderr=WARNING --log-file-verbosity=WARNING --certs-dir=/certs/nodes/node-0 --listen-addr=node-0.income-management.es:26257 --advertise-addr=node-0.income-management.es:26257 --join=node-0.income-management.es,node-1.income-management.es,node-2.income-management.es
+    volumes:
+      - cockroach-certs:/certs
+      - node-0:/cockroach/cockroach-data
+    ports:
+      - "8080:8080"
+    depends_on:
+      node-cert:
+        condition: service_completed_successfully
+
+  node-1:
+    container_name: node-1
+    hostname: node-1.income-management.es
+    image: cockroachdb/cockroach:latest
+    command: start --cluster-name=example-secure --logtostderr=WARNING --log-file-verbosity=WARNING --certs-dir=/certs/nodes/node-1 --listen-addr=node-1.income-management.es:26257 --advertise-addr=node-1.income-management.es:26257 --join=node-0.income-management.es,node-1.income-management.es,node-2.income-management.es
+    volumes:
+      - cockroach-certs:/certs
+      - node-1:/cockroach/cockroach-data
+    depends_on:
+      - node-cert
+      - node-0
+
+  node-2:
+    container_name: node-2
+    hostname: node-2.income-management.es
+    image: cockroachdb/cockroach:latest
+    command: start --cluster-name=example-secure --logtostderr=WARNING --log-file-verbosity=WARNING --certs-dir=/certs/nodes/node-2 --listen-addr=node-2.income-management.es:26257 --advertise-addr=node-2.income-management.es:26257 --join=node-0.income-management.es,node-1.income-management.es,node-2.income-management.es
+    volumes:
+      - cockroach-certs:/certs
+      - node-2:/cockroach/cockroach-data
+    depends_on:
+      - node-cert
+      - node-0
+  
+  node-3:
+    container_name: node-3
+    hostname: node-3.income-management.es
+    image: cockroachdb/cockroach:latest
+    command: start --cluster-name=example-secure --logtostderr=WARNING --log-file-verbosity=WARNING --certs-dir=/certs/nodes/node-3 --listen-addr=node-3.income-management.es:26257 --advertise-addr=node-3.income-management.es:26257 --join=node-0.income-management.es,node-1.income-management.es,node-2.income-management.es
+    volumes:
+      - cockroach-certs:/certs
+      - node-3:/cockroach/cockroach-data
+    depends_on:
+      - node-cert
+      - node-0
+    
+  node-4:
+    container_name: node-4
+    hostname: node-4.income-management.es
+    image: cockroachdb/cockroach:latest
+    command: start --cluster-name=example-secure --logtostderr=WARNING --log-file-verbosity=WARNING --certs-dir=/certs/nodes/node-4 --listen-addr=node-4.income-management.es:26257 --advertise-addr=node-4.income-management.es:26257 --join=node-0.income-management.es,node-1.income-management.es,node-2.income-management.es
+    volumes:
+      - cockroach-certs:/certs
+      - node-4:/cockroach/cockroach-data
+    depends_on:
+      - node-cert
+      - node-0
+
+  lb:
+    container_name: lb
+    hostname: lb.income-management.es
+    image: haproxy:latest
+    command: -f /haproxy/haproxy.cfg
+    volumes:
+      - ./haproxy:/haproxy
+    ports:
+      - "26257:26257"
+      - "8081:8080"
+    depends_on:
+      node-init:
+        condition: service_completed_successfully
+
+  node-init:
+    container_name: node-init
+    hostname: node-init
+    image: cockroach-init:latest
+    environment:
+      - NODE_NAME=node-0.income-management.es:26257
+      - CLUSTER_NAME=example-secure
+      - DATABASE=Income-Management
+      - USER=rjuzgado # Change to your user
+      - PASSWORD=Pl4TaN0. # Change to your password
+    volumes:
+      - cockroach-certs:/certs
+    depends_on:
+      - node-cert
+      - node-0
+      - node-1
+      - node-2
+      - node-3
+      - node-4
+  income-management-app:
+    container_name: income-management-app
+    hostname: income-management.es
+    image: income-management-app:latest
+    environment:
+      - DATABASE_NAME=Income-Management
+      - DATABASE_USER=rjuzgado
+      - DATABASE_PASSWORD=Pl4TaN0.
+      - DATABASE_HOST=lb.income-management.es
+      - DATABASE_PORT=26257
+      - CERT_PATH=/certs/ca/ca.crt
+    volumes:
+      - cockroach-certs:/certs
+    ports:
+      - "8000:8000"
+    depends_on:
+      - lb
