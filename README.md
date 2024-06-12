@@ -3,7 +3,7 @@
 <h2>Code requirements</h2>
 <ul>
  <li>Install requirements.txt python packages</li>
- <li>Install package.json dependencies located in \backend\project\frontend</li>
+ <li>Install package.json dependencies located at \backend\project\frontend</li>
 </ul>
 <h2>Synchronize clocks on different Linux machines</h2>
 Coming soon
@@ -48,7 +48,7 @@ This setup would work for a production environment
   <li>Create the CA (Certificate Authority) certificate and key pair: <code>cockroach cert create-ca --certs-dir=certs --ca-key=my-safe-directory/ca.key</code></li>
   <li>Create the certificate and key pair for your nodes. You need to include all the common names, hostnames and IPs used to refer the node you are creating the certificate for, as well as for the load balancer: 
    <code>cockroach cert create-node --overwrite node_internal_IP_address node_external_IP_address node_hostname other_common_names_for_node localhost 127.0.0.1 load_balancer_IP_address load_balancer_hostname other_common_names_for_load_balancer --certs-dir=certs --ca-key=my-safe-directory/ca.key</code></li>
-  <li>Upload the CA certificate and node certificate and key to the node. You can use ssh and scp to do it: <code>ssh username@node_address "mkdir certs"</code> <code>scp certs/ca.crt certs/node.crt certs/node.key username@node_address</code> </li>
+  <li>Upload the CA and node certificates and key to the node. You can use ssh and scp to do it: <code>ssh username@node_address "mkdir certs"</code> <code>scp certs/ca.crt certs/node.crt certs/node.key username@node_address</code> </li>
   <b>Note:</b> Do these last 2 steps for every node.
   <br>
  </ol>
@@ -58,7 +58,7 @@ This setup would work for a production environment
   <li>Upload the CA certificate and client certificate and key to the machine you want to log in as root: <code>ssh username@machine_address "mkdir certs"</code> <code>scp certs/ca.crt certs/client.root.crt certs/client.root.key username@machine_address:~/certs</code></li>
  </ol>
  <h3>Start nodes</h3>
- Make sure you have cockroach installed in each node and the binary copied to the path. Then, follow the next steps on each node:
+ Ensure you have cockroachdb installed in each node and the binary copied to the path. Then, follow the next steps on each node:
  <ol>
   <li>CockroachDB uses custom-built versions of the GEOS libraries. Copy these libraries to the location where CockroachDB expects to find them: <code>sudo mkdir -p /usr/local/lib/cockroach</code> <code>sudo cp -i cockroach-v24.1.0.linux-amd64/lib/libgeos.so /usr/local/lib/cockroach/</code> <code>sudo cp -i cockroach-v24.1.0.linux-amd64/lib/libgeos_c.so /usr/local/lib/cockroach/</code></li>
   <li>Run the cockroach start command: <code>cockroach start --certs-dir=certs --advertise-addr=node_address --join=node1_address,node2_address,node3_address</code></li>
@@ -75,4 +75,25 @@ Now, from the load balancer machine, follow the next steps:
  <li>Install HAProxy in the load balancer machine: <code>sudo apt-get install haproxy</code></li>
  <li>Start HAProxy: <code>haproxy -f haproxy.cfg</code></li>
 </ol>
+<h2>Docker Setup Secure</h2>
+For this setup you only need docker and npm installed.
+<h3>Configuration</h3>
+<ol>
+ <li>Install package.json dependencies located at \backend\project\frontend</li>
+ <li>Create the following docker images:</li>
+ <ul>
+  <li>income-management-app: the Dockerfile is located at the root of the project. Move to this folder and execute the command: <code>docker build -t income-management-app .</code></li>
+  <li>cockroach-cert-generator: the Dockerfile is located at /docker/cockroach-cert-generator. Move to this folder and execute the command: <code>docker build -t cockroach-cert-generator .</code></li>
+  <li>cockroach-init: the Dockerfile is located at /docker/cockroach-init. Move to this folder and execute the command: <code>docker build -t cockroach-init .</code></li>
+ </ul>
+ <li>Move to /docker and start the containers with the command: <code>docker compose up -d</code></li>
+</ol>
+<h3>Explanation of the images</h3>
+<h4>Income-management-app</h4>
+It's built from a python3.12 image. It installs all the dependencies in requirements.txt, copies all the files (except the ones in .dockerignore) and exposes port 8000. When the container is started, it executes the script create-env.py. This script creates a .env file with the variables needed (some of them are specified at docker-compose.yml), makes the migrations and starts the server.
 
+<h4>Cockroach-cert-generator</h4>
+Its function is to create all the certificates needed for each node.
+
+<h4>Cockroach-init</h4>
+Its function is to init the cluster, create the user with a password, create the database and give the user all the permissions on the database.
