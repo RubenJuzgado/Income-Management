@@ -76,21 +76,14 @@ Now, from the load balancer machine, follow the next steps:
  <li>Start HAProxy: <code>haproxy -f haproxy.cfg</code></li>
 </ol>
 <h2>Docker Setup Secure</h2>
-For this setup you only need docker and npm installed.
+For this setup you only need docker installed.
 <h3>Configuration</h3>
 <ol>
- <li>Install package.json dependencies located at \backend\project\frontend</li>
- <li>Create the following docker images:</li>
- <ul>
-  <li>income-management-app: the Dockerfile is located at the root of the project. Move to this folder and execute the command: <code>docker build -t income-management-app .</code></li>
-  <li>cockroach-cert-generator: the Dockerfile is located at /docker/cockroach-cert-generator. Move to this folder and execute the command: <code>docker build -t cockroach-cert-generator .</code></li>
-  <li>cockroach-init: the Dockerfile is located at /docker/cockroach-init. Move to this folder and execute the command: <code>docker build -t cockroach-init .</code></li>
- </ul>
  <li>Move to /docker and start the containers with the command: <code>docker compose up -d</code></li>
 </ol>
 <h3>Explanation of the images</h3>
 <h4>Income-management-app</h4>
-It's built from a python3.12 image. It installs all the dependencies in requirements.txt, copies all the files (except the ones in .dockerignore) and exposes port 8000. When the container is started, it executes the script create-env.py. This script creates a .env file with the variables needed (some of them are specified at docker-compose.yml), makes the migrations and starts the server.
+It's a multi-stage build. First, it copies the frontend files, installs the dependencies and builds the project in an intermediate image with node20. Then, in a python3.12 image, it installs all the dependencies in requirements.txt, copies all the files (except the ones in .dockerignore) and exposes port 8000. When the container is started, it executes the script create-env.py. This script creates a .env file with the variables needed (some of them are specified at docker-compose.yml), makes the migrations and starts the server.
 
 <h4>Cockroach-cert-generator</h4>
 Its function is to create all the certificates needed for each node.
