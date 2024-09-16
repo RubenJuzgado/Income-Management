@@ -122,7 +122,9 @@ services:
   income-management-app:
     container_name: income-management-app
     hostname: income-management.es
-    image: income-management-app:latest
+    build:
+      context: ../
+      dockerfile: Dockerfile
     environment:
       - DATABASE_NAME=Income-Management
       - DATABASE_USER=rjuzgado

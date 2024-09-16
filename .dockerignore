@@ -6,3 +6,5 @@
 /backend/project/project/__pycache__/
 /backend/project/.env
 /backend/project/db.sqlite3
+/frontend/node_modules/
+/frontend/dist
