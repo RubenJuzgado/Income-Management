@@ -13,7 +13,9 @@ services:
   node-cert:
     container_name: node-cert
     hostname: node-cert
-    image: cockroach-cert-generator:latest
+    build:
+      context: ./cockroach-cert-generator
+      dockerfile: Dockerfile
     volumes:
       - cockroach-certs:/certs
     environment:
@@ -99,7 +101,9 @@ services:
   node-init:
     container_name: node-init
     hostname: node-init
-    image: cockroach-init:latest
+    build:
+      context: ./cockroach-init
+      dockerfile: Dockerfile
     environment:
       - NODE_NAME=node-0.income-management.es:26257
       - CLUSTER_NAME=example-secure
@@ -132,3 +136,13 @@ services:
       - "8000:8000"
     depends_on:
       - lb
+
+  # node-test:
+  #   container_name: node-test
+  #   image: cockroachdb/cockroach:latest
+  #   command: workload init bank 'postgresql://root@lb.income-management.es:26257?sslcert=/certs%2Fca%2Fclient.root.crt&&sslkey=/certs%2Fca%2Fclient.root.key&&sslmode=verify-full&&sslrootcert=/certs%2Fca%2Fca.crt'
+  #   volumes:
+  #     - cockroach-certs:/certs
+  #   depends_on:
+  #     - lb
+    
